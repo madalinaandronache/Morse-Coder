@@ -1,0 +1,26 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "preLaunchTask": "rust: cargo build",
+            "type": "probe-rs-debug",
+            "request": "launch",
+            "name": "Raspberry Pi Pico 2",
+            "cwd": "${workspaceFolder}",
+            "connectUnderReset": false,
+            "chip": "RP235x",
+            "flashingConfig": {
+                "flashingEnabled": true,
+                "haltAfterReset": false,
+            },
+            "coreConfigs": [
+                {
+                    "coreIndex": 0,
+                    "programBinary": "./target/thumbv8m.main-none-eabihf/debug/${workspaceFolderBasename}",
+                    "svdFile": "./rp2350.svd",
+                    "rttEnabled": true,
+                }
+            ]
+        }
+    ]
+}

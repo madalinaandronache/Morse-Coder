@@ -1,0 +1,139 @@
+# This file is used for defining a package and/or a workspace. A workspace is a set of packages that
+# share the same `Cargo.lock` and output directory.
+
+# This table defines the package keys. 
+[package]
+# The package name
+name = "lab-2025"
+# Write your name and email here!
+authors = ["Your Name <your.email@domain>"]
+# Inherited from the workspace
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+# This table contains the dependencies to be inherited by the members of a workspace.
+[dependencies]
+# Lab utilities
+embassy-lab-utils = { path = "./embassy-lab-utils" }
+
+# Embedded hal utilities
+embassy-embedded-hal = { version = "0.3.0", git = "https://github.com/embassy-rs/embassy", rev = "2e7a2b6", features = ["defmt"] }
+
+# Synchronization primitives and data structures with async support
+embassy-sync = { version = "0.6.2", git = "https://github.com/embassy-rs/embassy", rev = "2e7a2b6", features = ["defmt"] }
+
+# Async/await executor
+embassy-executor = { version = "0.7.0", git = "https://github.com/embassy-rs/embassy", rev = "2e7a2b6", features = ["task-arena-size-98304", "arch-cortex-m", "executor-thread", "executor-interrupt", "defmt"] }
+
+# Utilities for working with futures, compatible with no_std and not using alloc
+embassy-futures = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy", rev = "2e7a2b6" }
+
+# Timekeeping, delays and timeouts
+embassy-time = { version = "0.4.0", git = "https://github.com/embassy-rs/embassy", rev = "2e7a2b6", features = ["defmt", "defmt-timestamp-uptime"] }
+
+# RP2350 HAL
+embassy-rp = { version = "0.3.0", git = "https://github.com/embassy-rs/embassy", rev = "2e7a2b6", features = ["defmt", "unstable-pac", "time-driver", "critical-section-impl", "rp235xa", "binary-info"] }
+
+# USB device
+embassy-usb = { version = "0.4.0", git = "https://github.com/embassy-rs/embassy", rev = "2e7a2b6", features = ["defmt"] }
+
+# Network stack
+embassy-net = { version = "0.7.0", git = "https://github.com/embassy-rs/embassy", rev = "2e7a2b6", features = ["defmt", "tcp", "udp", "raw", "dhcpv4", "medium-ethernet", "dns"] }
+embassy-net-wiznet = { version = "0.2.0", git = "https://github.com/embassy-rs/embassy", rev = "2e7a2b6", features = ["defmt"] }
+
+# USB logging
+embassy-usb-logger = { version = "0.4.0", git = "https://github.com/embassy-rs/embassy", rev = "2e7a2b6" }
+log = "0.4"
+
+# WiFi Chip
+cyw43 = { version = "0.3.0", git = "https://github.com/embassy-rs/embassy", rev = "2e7a2b6", features = ["defmt", "firmware-logs"] }
+cyw43-pio = { version = "0.3.0", git = "https://github.com/embassy-rs/embassy", rev = "2e7a2b6", features = ["defmt"] }
+
+# Defmt support
+defmt = "0.3"
+defmt-rtt = "0.4"
+
+# Fixed-point numbers
+fixed = "1.23.1"
+fixed-macro = "1.2"
+
+# Json serialization/deserialization support
+serde = { version = "1.0.203", default-features = false, features = ["derive"] }
+serde-json-core = "0.5.1"
+
+# Low level access to Cortex-M processors
+# cortex-m = { version = "0.7.6", features = ["inline-asm"] }
+cortex-m-rt = "0.7.0"
+
+# Critical section primitive
+critical-section = "1.1"
+
+# Panic handler that exits `probe-run` with an error code
+panic-probe = { version = "0.3", features = ["print-defmt"] }
+
+# Graphics crate 
+embedded-graphics = "0.8.1"
+
+# SPI Display support
+display-interface-spi = "0.5.0"
+display-interface = "0.5.0"
+
+# Generic display driver to connect to TFT displays
+mipidsi = "0.8.0"
+
+# Heapless allocator
+heapless = "0.8"
+
+# The main embedded hal with only blocking traits
+embedded-hal-1 = { package = "embedded-hal", version = "1.0" }
+
+# Async embedded hal  
+embedded-hal-async = "1.0"
+
+# SPI/I2C bus sharing utilities for embedded-hal
+embedded-hal-bus = { version = "0.1", features = ["async"] }
+
+# Async IO traits for embedded systems
+embedded-io-async = { version = "0.6.1", features = ["defmt-03"] }
+
+# Statically allocated, initialized at runtime cell
+static_cell = "2.1"
+
+# Traits that can be implemented to provide access to non-volatile storage 
+embedded-storage = { version = "0.3" }
+
+# Random number generators
+rand = { version = "0.8.5", default-features = false }
+
+# Support for read/write files on a FAT formatted SD
+embedded-sdmmc = "0.7.0"
+
+# Safely cast between byte slices and slices of another built-in fundamental number type.
+byte-slice-cast = { version = "1.2.0", default-features = false }
+
+
+# adugate de mine
+lcd-lcm1602-i2c = "0.3.0"
+embedded-hal = "0.2"
+# LCD Driver
+lcd1602-driver = "0.3.0"
+
+# This table is used to specify the member crates of this workspace.
+[workspace]
+members = ["./embassy-lab-utils"]
+# The resolver is a component responsible for determining the versions of
+# dependencies that should be used to build a Rust project.
+resolver = "3"
+
+# The table is where you define keys that can be inherited by members of a workspace.
+[workspace.package]
+# The version of the Rust language and compiler your package will be compiled with.
+rust-version = "1.85"
+# This tag is used to specify which edition of the Rust language the project is using.
+edition = "2024"
+# Rust follows the concept of Semantic Versioning.
+version = "0.1.0"
+
+[profile.release]
+debug = true
