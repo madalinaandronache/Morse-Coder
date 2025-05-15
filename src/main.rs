@@ -95,12 +95,11 @@ async fn main(_spawner: Spawner) {
         ['*', '0', '#', 'D'],
     ];
 
-    blink_all(&mut led1, &mut led2, &mut led3).await;
-    beep(&mut buzzer).await;
-
     loop {
         if let Some(key) = scan_keypad(&mut row_pins, &mut col_pins, keys).await {
             defmt::info!("Key: {}", key);
+            blink_all(&mut led1, &mut led2, &mut led3).await;
+            beep(&mut buzzer).await;
         }
 
         Timer::after(Duration::from_millis(50)).await;
