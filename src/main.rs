@@ -2,10 +2,9 @@
 #![no_main]
 
 use embassy_executor::Spawner;
-use embassy_rp::gpio::{Level, Output};
+use embassy_rp::gpio::{Level, Output, Input, Pull};
 use embassy_rp::init;
 use embassy_time::{Timer, Duration};
-
 use {defmt_rtt as _, panic_probe as _};
 
 // Blink all 3 LEDs at the same time
@@ -45,8 +44,52 @@ async fn main(_spawner: Spawner) {
     // Initialize the buzzer
     let mut buzzer = Output::new(p.PIN_16, Level::Low);
 
+    // Initialize the keypad
+    let mut row_pins = [
+        Input::new(p.PIN_6, Pull::Up),
+        Input::new(p.PIN_7, Pull::Up),
+        Input::new(p.PIN_8, Pull::Up),
+        Input::new(p.PIN_9, Pull::Up),
+    ];
+
+    let mut col_pins = [
+        Output::new(p.PIN_10, Level::High),
+        Output::new(p.PIN_11, Level::High),
+        Output::new(p.PIN_12, Level::High),
+        Output::new(p.PIN_13, Level::High),
+    ];
+
+    // Standard configuration of the keypad
+    let keys: [[char; 4]; 4] = [
+        ['1', '2', '3', 'A'], 
+        ['4', '5', '6', 'B'],
+        ['7', '8', '9', 'C'],
+        ['*', '0', '#', 'D'],
+    ];
+
+    blink_all(&mut led1, &mut led2, &mut led3).await;
+    beep(&mut buzzer).await;
+
     loop {
-        blink_all(&mut led1, &mut led2, &mut led3).await;
-        beep(&mut buzzer).await;
+        for (col_idx, col) in col_pins.iter_mut().enumerate() {
+            col.set_low();
+            for (row_idx, row) in row_pins.iter().enumerate() {
+                if row.is_low() {
+                    let key = keys[row_idx][col_idx];
+                    defmt::info!("Tasta apăsată: {}", key);
+
+                    // Wait until the button is unpressed
+                    while row.is_low() {
+                        Timer::after(Duration::from_millis(10)).await;
+                    }
+
+                    Timer::after(Duration::from_millis(150)).await;
+                }
+            }
+
+            col.set_high();
+        }
+
+        Timer::after(Duration::from_millis(50)).await;
     }
 }
