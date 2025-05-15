@@ -113,10 +113,9 @@ embedded-sdmmc = "0.7.0"
 byte-slice-cast = { version = "1.2.0", default-features = false }
 
 
-# adugate de mine
+# LCD Driver for LCD 1602
 lcd-lcm1602-i2c = "0.3.0"
 embedded-hal = "0.2"
-# LCD Driver
 lcd1602-driver = "0.3.0"
 
 # This table is used to specify the member crates of this workspace.

@@ -3,9 +3,20 @@
 
 use embassy_executor::Spawner;
 use embassy_rp::gpio::{Level, Output, Input, Pull};
-use embassy_rp::init;
-use embassy_time::{Timer, Duration};
+use embassy_rp::{init, bind_interrupts, i2c::InterruptHandler};
+use embassy_rp::i2c::{I2c, Config as I2cConfig};
+use embassy_rp::peripherals::I2C1;
+use embassy_time::{Timer, Duration, Delay};
 use {defmt_rtt as _, panic_probe as _};
+use lcd1602_driver::{
+    lcd::{Basic, Ext, Lcd, Config},
+    sender::I2cSender,
+};
+
+bind_interrupts!(struct Irqs {
+    I2C1_IRQ => InterruptHandler<I2C1>;
+});
+
 
 // Blink all 3 LEDs at the same time
 async fn blink_all(
@@ -94,6 +105,20 @@ async fn main(_spawner: Spawner) {
         ['7', '8', '9', 'C'],
         ['*', '0', '#', 'D'],
     ];
+
+    let sda = p.PIN_2;
+    let scl = p.PIN_3;
+    let mut i2c = I2c::new_async(p.I2C1, scl, sda, Irqs, I2cConfig::default());
+   
+    let mut delay = Delay;
+    let mut sender = I2cSender::new(&mut i2c, 0x27);
+    let mut lcd = Lcd::new(&mut sender, &mut delay, Config::default(), None);
+
+    Timer::after(Duration::from_millis(20)).await;
+    lcd.clean_display();
+    lcd.return_home();
+    lcd.set_cursor_pos((0, 0));
+    lcd.write_str_to_cur("Keypad Ready");
 
     loop {
         if let Some(key) = scan_keypad(&mut row_pins, &mut col_pins, keys).await {
