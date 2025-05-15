@@ -31,6 +31,34 @@ async fn beep(buzzer: &mut Output<'static>) {
     buzzer.set_low();
 }
 
+// Check if a button is pressed
+async fn scan_keypad(
+    rows: &mut [Input<'static>; 4],
+    cols: &mut [Output<'static>; 4],
+    keys: [[char; 4]; 4],
+) -> Option<char> {
+    for (c, col) in cols.iter_mut().enumerate() {
+        col.set_low();
+
+        for (r, row) in rows.iter().enumerate() {
+            if row.is_low() {
+                while row.is_low() {
+                    Timer::after(Duration::from_millis(10)).await;
+                }
+
+                Timer::after(Duration::from_millis(100)).await;
+                col.set_high();
+                return Some(keys[r][c]);
+            }
+        }
+
+        col.set_high();
+    }
+
+    None
+}
+
+
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {
     // Initialize the peripherals
@@ -71,23 +99,8 @@ async fn main(_spawner: Spawner) {
     beep(&mut buzzer).await;
 
     loop {
-        for (col_idx, col) in col_pins.iter_mut().enumerate() {
-            col.set_low();
-            for (row_idx, row) in row_pins.iter().enumerate() {
-                if row.is_low() {
-                    let key = keys[row_idx][col_idx];
-                    defmt::info!("Tasta apăsată: {}", key);
-
-                    // Wait until the button is unpressed
-                    while row.is_low() {
-                        Timer::after(Duration::from_millis(10)).await;
-                    }
-
-                    Timer::after(Duration::from_millis(150)).await;
-                }
-            }
-
-            col.set_high();
+        if let Some(key) = scan_keypad(&mut row_pins, &mut col_pins, keys).await {
+            defmt::info!("Key: {}", key);
         }
 
         Timer::after(Duration::from_millis(50)).await;
