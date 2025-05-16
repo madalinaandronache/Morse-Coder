@@ -69,6 +69,40 @@ async fn scan_keypad(
     None
 }
 
+// Initialize the keypad
+fn init_keypad(
+    p6: embassy_rp::peripherals::PIN_6,
+    p7: embassy_rp::peripherals::PIN_7,
+    p8: embassy_rp::peripherals::PIN_8,
+    p9: embassy_rp::peripherals::PIN_9,
+    p10: embassy_rp::peripherals::PIN_10,
+    p11: embassy_rp::peripherals::PIN_11,
+    p12: embassy_rp::peripherals::PIN_12,
+    p13: embassy_rp::peripherals::PIN_13,
+) -> ([Input<'static>; 4], [Output<'static>; 4], [[char; 4]; 4]) {
+    let rows = [
+        Input::new(p6, Pull::Up),
+        Input::new(p7, Pull::Up),
+        Input::new(p8, Pull::Up),
+        Input::new(p9, Pull::Up),
+    ];
+
+    let cols = [
+        Output::new(p10, Level::High),
+        Output::new(p11, Level::High),
+        Output::new(p12, Level::High),
+        Output::new(p13, Level::High),
+    ];
+
+    let keys = [
+        ['1', '2', '3', 'A'],
+        ['4', '5', '6', 'B'],
+        ['7', '8', '9', 'C'],
+        ['*', '0', '#', 'D'],
+    ];
+
+    (rows, cols, keys)
+}
 
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {
@@ -83,28 +117,10 @@ async fn main(_spawner: Spawner) {
     // Initialize the buzzer
     let mut buzzer = Output::new(p.PIN_16, Level::Low);
 
-    // Initialize the keypad
-    let mut row_pins = [
-        Input::new(p.PIN_6, Pull::Up),
-        Input::new(p.PIN_7, Pull::Up),
-        Input::new(p.PIN_8, Pull::Up),
-        Input::new(p.PIN_9, Pull::Up),
-    ];
-
-    let mut col_pins = [
-        Output::new(p.PIN_10, Level::High),
-        Output::new(p.PIN_11, Level::High),
-        Output::new(p.PIN_12, Level::High),
-        Output::new(p.PIN_13, Level::High),
-    ];
-
-    // Standard configuration of the keypad
-    let keys: [[char; 4]; 4] = [
-        ['1', '2', '3', 'A'], 
-        ['4', '5', '6', 'B'],
-        ['7', '8', '9', 'C'],
-        ['*', '0', '#', 'D'],
-    ];
+    let (mut row_pins, mut col_pins, keys) = init_keypad(
+        p.PIN_6, p.PIN_7, p.PIN_8, p.PIN_9,
+        p.PIN_10, p.PIN_11, p.PIN_12, p.PIN_13,
+    );
 
     let sda = p.PIN_2;
     let scl = p.PIN_3;
