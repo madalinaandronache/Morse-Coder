@@ -153,34 +153,37 @@ async fn display_letter_morse(
     led1: &mut Output<'static>,
     led2: &mut Output<'static>,
     led3: &mut Output<'static>,
+    buzzer: &mut Output<'static>,
 ) {
-    let morse = morse_table(c);
-
-    if let Some(code) = morse {
+    if let Some(code) = morse_table(c) {
         for symbol in code.chars() {
             match symbol {
                 '.' => {
                     led2.set_high();
-                    Timer::after(Duration::from_millis(600)).await;
+                    buzzer.set_high();
+                    Timer::after(Duration::from_millis(200)).await;
                     led2.set_low();
+                    buzzer.set_low();
                 }
                 '-' => {
                     led1.set_high();
                     led2.set_high();
                     led3.set_high();
+                    buzzer.set_high();
                     Timer::after(Duration::from_millis(600)).await;
                     led1.set_low();
                     led2.set_low();
                     led3.set_low();
+                    buzzer.set_low();
                 }
                 _ => {}
             }
-            
+
             // Break between signals
             Timer::after(Duration::from_millis(200)).await;
         }
 
-        // Break between multiple letters
+        // Break between letters
         Timer::after(Duration::from_millis(600)).await;
     }
 }
@@ -221,10 +224,7 @@ async fn main(_spawner: Spawner) {
     loop {
         if let Some(key) = scan_keypad(&mut row_pins, &mut col_pins, keys).await {
             defmt::info!("Key: {}", key);
-            display_letter_morse(key, &mut led1, &mut led2, &mut led3).await;
-
-            //blink_all(&mut led1, &mut led2, &mut led3).await;
-            beep(&mut buzzer).await;
+            display_letter_morse(key, &mut led1, &mut led2, &mut led3, &mut buzzer).await;
         }
 
         Timer::after(Duration::from_millis(50)).await;
