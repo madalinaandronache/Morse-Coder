@@ -104,6 +104,88 @@ fn init_keypad(
     (rows, cols, keys)
 }
 
+// Transformation of a character into Morse signals
+fn morse_table(c: char) -> Option<&'static str> {
+    match c.to_ascii_uppercase() {
+        'A' => Some(".-"),
+        'B' => Some("-..."),
+        'C' => Some("-.-."),
+        'D' => Some("-.."),
+        'E' => Some("."),
+        'F' => Some("..-."),
+        'G' => Some("--."),
+        'H' => Some("...."),
+        'I' => Some(".."),
+        'J' => Some(".---"),
+        'K' => Some("-.-"),
+        'L' => Some(".-.."),
+        'M' => Some("--"),
+        'N' => Some("-."),
+        'O' => Some("---"),
+        'P' => Some(".--."),
+        'Q' => Some("--.-"),
+        'R' => Some(".-."),
+        'S' => Some("..."),
+        'T' => Some("-"),
+        'U' => Some("..-"),
+        'V' => Some("...-"),
+        'W' => Some(".--"),
+        'X' => Some("-..-"),
+        'Y' => Some("-.--"),
+        'Z' => Some("--.."),
+        '0' => Some("-----"),
+        '1' => Some(".----"),
+        '2' => Some("..---"),
+        '3' => Some("...--"),
+        '4' => Some("....-"),
+        '5' => Some("....."),
+        '6' => Some("-...."),
+        '7' => Some("--..."),
+        '8' => Some("---.."),
+        '9' => Some("----."),
+        _ => None,
+    }
+}
+
+
+async fn display_letter_morse(
+    c: char,
+    led1: &mut Output<'static>,
+    led2: &mut Output<'static>,
+    led3: &mut Output<'static>,
+) {
+    let morse = morse_table(c);
+
+    if let Some(code) = morse {
+        for symbol in code.chars() {
+            match symbol {
+                '.' => {
+                    led2.set_high();
+                    Timer::after(Duration::from_millis(600)).await;
+                    led2.set_low();
+                }
+                '-' => {
+                    led1.set_high();
+                    led2.set_high();
+                    led3.set_high();
+                    Timer::after(Duration::from_millis(600)).await;
+                    led1.set_low();
+                    led2.set_low();
+                    led3.set_low();
+                }
+                _ => {}
+            }
+            
+            // Break between signals
+            Timer::after(Duration::from_millis(200)).await;
+        }
+
+        // Break between multiple letters
+        Timer::after(Duration::from_millis(600)).await;
+    }
+}
+
+
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {
     // Initialize the peripherals
@@ -113,6 +195,8 @@ async fn main(_spawner: Spawner) {
     let mut led1 = Output::new(p.PIN_18, Level::Low);
     let mut led2 = Output::new(p.PIN_19, Level::Low);
     let mut led3 = Output::new(p.PIN_20, Level::Low);
+
+    display_letter_morse('A', &mut led1, &mut led2, &mut led3).await;
 
     // Initialize the buzzer
     let mut buzzer = Output::new(p.PIN_16, Level::Low);
