@@ -196,8 +196,6 @@ async fn main(_spawner: Spawner) {
     let mut led2 = Output::new(p.PIN_19, Level::Low);
     let mut led3 = Output::new(p.PIN_20, Level::Low);
 
-    display_letter_morse('A', &mut led1, &mut led2, &mut led3).await;
-
     // Initialize the buzzer
     let mut buzzer = Output::new(p.PIN_16, Level::Low);
 
@@ -223,7 +221,9 @@ async fn main(_spawner: Spawner) {
     loop {
         if let Some(key) = scan_keypad(&mut row_pins, &mut col_pins, keys).await {
             defmt::info!("Key: {}", key);
-            blink_all(&mut led1, &mut led2, &mut led3).await;
+            display_letter_morse(key, &mut led1, &mut led2, &mut led3).await;
+
+            //blink_all(&mut led1, &mut led2, &mut led3).await;
             beep(&mut buzzer).await;
         }
 
