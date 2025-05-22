@@ -215,15 +215,30 @@ async fn main(_spawner: Spawner) {
     let mut sender = I2cSender::new(&mut i2c, 0x27);
     let mut lcd = Lcd::new(&mut sender, &mut delay, Config::default(), None);
 
-    Timer::after(Duration::from_millis(20)).await;
-    lcd.clean_display();
+    Timer::after(Duration::from_millis(300)).await;
     lcd.return_home();
+    Timer::after(Duration::from_millis(5)).await;
+
+    lcd.clean_display();
+    Timer::after(Duration::from_millis(5)).await;
     lcd.set_cursor_pos((0, 0));
-    lcd.write_str_to_cur("Keypad Ready");
+    lcd.write_str_to_cur("Keypad Ready!");
 
     loop {
         if let Some(key) = scan_keypad(&mut row_pins, &mut col_pins, keys).await {
             defmt::info!("Key: {}", key);
+
+            if let Some(code) = morse_table(key) {
+                lcd.clean_display();
+                lcd.set_cursor_pos((0, 0));
+                lcd.write_str_to_cur("Char: ");
+                lcd.write_char_to_cur(key);
+
+                lcd.set_cursor_pos((0, 1));
+                lcd.write_str_to_cur("Morse: ");
+                lcd.write_str_to_cur(code);
+            }
+
             display_letter_morse(key, &mut led1, &mut led2, &mut led3, &mut buzzer).await;
         }
 
