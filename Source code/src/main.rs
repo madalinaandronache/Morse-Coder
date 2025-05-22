@@ -203,6 +203,17 @@ fn get_multitap_chars(key: char) -> Option<&'static [char]> {
     }
 }
 
+fn confirm_key(key: char, tap_index: usize) -> Option<char> {
+    if let Some(chars) = get_multitap_chars(key) {
+        let ch = chars[tap_index % chars.len()];
+        defmt::info!("Confirmed '{}'", ch);
+        Some(ch)
+    } else {
+        defmt::warn!("Tried to confirm unmapped key '{}'", key);
+        None
+    }
+}
+
 async fn handle_multitap_input(
     rows: &mut [Input<'static>; 4],
     cols: &mut [Output<'static>; 4],
@@ -217,9 +228,7 @@ async fn handle_multitap_input(
     // Confirm the key after timeout
     if let Some(last) = last_key {
         if now.checked_duration_since(*last_press_time).unwrap_or(timeout) >= timeout {
-            if let Some(chars) = get_multitap_chars(*last) {
-                let ch = chars[*tap_index % chars.len()];
-                defmt::info!("Confirmed '{}'", ch);
+            if let Some(ch) = confirm_key(*last, *tap_index) {
                 *last_key = None;
                 *tap_index = 0;
                 return Some(ch);
@@ -229,6 +238,13 @@ async fn handle_multitap_input(
 
     // Detect the key pressed
     if let Some(key) = scan_keypad(rows, cols, keys).await {
+        if get_multitap_chars(key).is_none() {
+            defmt::warn!("Unmapped key '{}'", key);
+            *last_key = None;
+            *tap_index = 0;
+            return None;
+        }
+
         defmt::info!("Pressed key: {}", key);
 
         if Some(key) == *last_key {
@@ -236,9 +252,7 @@ async fn handle_multitap_input(
             defmt::info!("Same key tapped {} time(s)", *tap_index + 1);
         } else {
             if let Some(last) = *last_key {
-                if let Some(chars) = get_multitap_chars(last) {
-                    let ch = chars[*tap_index % chars.len()];
-                    defmt::info!("Confirmed '{}'", ch);
+                if let Some(ch) = confirm_key(last, *tap_index) {
                     *last_key = Some(key);
                     *tap_index = 0;
                     *last_press_time = now;
@@ -251,12 +265,9 @@ async fn handle_multitap_input(
         *last_key = Some(key);
         *last_press_time = now;
 
-        if let Some(chars) = get_multitap_chars(key) {
-            let ch = chars[*tap_index % chars.len()];
-            defmt::info!("Current character: '{}'", ch);
-        } else {
-            defmt::warn!("Unmapped key '{}'", key);
-        }
+        let chars = get_multitap_chars(key).unwrap();
+        let ch = chars[*tap_index % chars.len()];
+        defmt::info!("Current character: '{}'", ch);
     }
 
     Timer::after(Duration::from_millis(50)).await;
