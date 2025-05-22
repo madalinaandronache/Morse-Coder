@@ -17,6 +17,12 @@ bind_interrupts!(struct Irqs {
     I2C1_IRQ => InterruptHandler<I2C1>;
 });
 
+#[derive(Copy, Clone, PartialEq)]
+enum InputMode {
+    Text,
+    Numeric,
+}
+
 
 // Blink all 3 LEDs at the same time
 async fn blink_all(
@@ -203,16 +209,25 @@ fn get_multitap_chars(key: char) -> Option<&'static [char]> {
     }
 }
 
-fn confirm_key(key: char, tap_index: usize) -> Option<char> {
-    if let Some(chars) = get_multitap_chars(key) {
-        let ch = chars[tap_index % chars.len()];
-        defmt::info!("Confirmed '{}'", ch);
-        Some(ch)
-    } else {
-        defmt::warn!("Tried to confirm unmapped key '{}'", key);
-        None
+fn confirm_key(key: char, tap_index: usize, mode: InputMode) -> Option<char> {
+    match mode {
+        InputMode::Numeric => {
+            if key.is_ascii_digit() {
+                Some(key)
+            } else {
+                None
+            }
+        }
+        InputMode::Text => {
+            if let Some(chars) = get_multitap_chars(key) {
+                Some(chars[tap_index % chars.len()])
+            } else {
+                None
+            }
+        }
     }
 }
+
 
 async fn handle_multitap_input(
     rows: &mut [Input<'static>; 4],
@@ -221,23 +236,31 @@ async fn handle_multitap_input(
     last_key: &mut Option<char>,
     tap_index: &mut usize,
     last_press_time: &mut Instant,
-) -> Option<char> {
+    mode: InputMode,
+) -> Option<(char, bool)> {
     let now = Instant::now();
     let timeout = Duration::from_millis(1000);
 
     // Confirm the key after timeout
     if let Some(last) = last_key {
         if now.checked_duration_since(*last_press_time).unwrap_or(timeout) >= timeout {
-            if let Some(ch) = confirm_key(*last, *tap_index) {
+            if let Some(ch) = confirm_key(*last, *tap_index, mode) {
                 *last_key = None;
                 *tap_index = 0;
-                return Some(ch);
+                return Some((ch, false));
             }
         }
     }
 
     // Detect the key pressed
     if let Some(key) = scan_keypad(rows, cols, keys).await {
+        if key == '#' {
+            defmt::info!("Mode switch requested via '#'");
+            *last_key = None;
+            *tap_index = 0;
+            return Some(('#', true));
+        }
+
         if get_multitap_chars(key).is_none() {
             defmt::warn!("Unmapped key '{}'", key);
             *last_key = None;
@@ -252,11 +275,11 @@ async fn handle_multitap_input(
             defmt::info!("Same key tapped {} time(s)", *tap_index + 1);
         } else {
             if let Some(last) = *last_key {
-                if let Some(ch) = confirm_key(last, *tap_index) {
+                if let Some(ch) = confirm_key(last, *tap_index, mode) {
                     *last_key = Some(key);
                     *tap_index = 0;
                     *last_press_time = now;
-                    return Some(ch);
+                    return Some((ch, false));
                 }
             }
             *tap_index = 0;
@@ -296,6 +319,9 @@ async fn main(_spawner: Spawner) {
     let mut last_key: Option<char> = None;
     let mut tap_index: usize = 0;
     let mut last_press_time = Instant::now();
+    // Keep the input mode
+    let mut mode = InputMode::Text;
+
 
     let sda = p.PIN_2;
     let scl = p.PIN_3;
@@ -316,15 +342,32 @@ async fn main(_spawner: Spawner) {
     lcd.write_str_to_cur("Keypad Ready!");
 
     loop {
-        if let Some(c) = handle_multitap_input(
+        if let Some((c, is_mode_switch)) = handle_multitap_input(
             &mut row_pins,
             &mut col_pins,
             keys,
             &mut last_key,
             &mut tap_index,
-            &mut last_press_time
+            &mut last_press_time,
+            mode
         ).await {
+            if is_mode_switch {
+                mode = match mode {
+                    InputMode::Text => InputMode::Numeric,
+                    InputMode::Numeric => InputMode::Text,
+                };
+
+                lcd.clean_display();
+                lcd.set_cursor_pos((0, 0));
+                lcd.write_str_to_cur(match mode {
+                    InputMode::Text => "Mode: Text",
+                    InputMode::Numeric => "Mode: 123",
+                });
+                continue;
+            }
+
             defmt::info!("Final confirmed input: '{}'", c);
+
             if let Some(code) = morse_table(c) {
                 lcd.clean_display();
                 lcd.set_cursor_pos((0, 0));
