@@ -6,7 +6,7 @@ use embassy_rp::gpio::{Level, Output, Input, Pull};
 use embassy_rp::{init, bind_interrupts, i2c::InterruptHandler};
 use embassy_rp::i2c::{I2c, Config as I2cConfig};
 use embassy_rp::peripherals::I2C1;
-use embassy_time::{Timer, Duration, Delay};
+use embassy_time::{Timer, Duration, Delay, Instant};
 use {defmt_rtt as _, panic_probe as _};
 use lcd1602_driver::{
     lcd::{Basic, Ext, Lcd, Config},
@@ -188,6 +188,80 @@ async fn display_letter_morse(
     }
 }
 
+fn get_multitap_chars(key: char) -> Option<&'static [char]> {
+    match key {
+        '2' => Some(&['A', 'B', 'C']),
+        '3' => Some(&['D', 'E', 'F']),
+        '4' => Some(&['G', 'H', 'I']),
+        '5' => Some(&['J', 'K', 'L']),
+        '6' => Some(&['M', 'N', 'O']),
+        '7' => Some(&['P', 'Q', 'R', 'S']),
+        '8' => Some(&['T', 'U', 'V']),
+        '9' => Some(&['W', 'X', 'Y', 'Z']),
+        '0' => Some(&[' ']),
+        _ => None,
+    }
+}
+
+async fn handle_multitap_input(
+    rows: &mut [Input<'static>; 4],
+    cols: &mut [Output<'static>; 4],
+    keys: [[char; 4]; 4],
+    last_key: &mut Option<char>,
+    tap_index: &mut usize,
+    last_press_time: &mut Instant,
+) -> Option<char> {
+    let now = Instant::now();
+    let timeout = Duration::from_millis(1000);
+
+    // Confirm the key after timeout
+    if let Some(last) = last_key {
+        if now.checked_duration_since(*last_press_time).unwrap_or(timeout) >= timeout {
+            if let Some(chars) = get_multitap_chars(*last) {
+                let ch = chars[*tap_index % chars.len()];
+                defmt::info!("Confirmed '{}'", ch);
+                *last_key = None;
+                *tap_index = 0;
+                return Some(ch);
+            }
+        }
+    }
+
+    // Detect the key pressed
+    if let Some(key) = scan_keypad(rows, cols, keys).await {
+        defmt::info!("Pressed key: {}", key);
+
+        if Some(key) == *last_key {
+            *tap_index += 1;
+            defmt::info!("Same key tapped {} time(s)", *tap_index + 1);
+        } else {
+            if let Some(last) = *last_key {
+                if let Some(chars) = get_multitap_chars(last) {
+                    let ch = chars[*tap_index % chars.len()];
+                    defmt::info!("Confirmed '{}'", ch);
+                    *last_key = Some(key);
+                    *tap_index = 0;
+                    *last_press_time = now;
+                    return Some(ch);
+                }
+            }
+            *tap_index = 0;
+        }
+
+        *last_key = Some(key);
+        *last_press_time = now;
+
+        if let Some(chars) = get_multitap_chars(key) {
+            let ch = chars[*tap_index % chars.len()];
+            defmt::info!("Current character: '{}'", ch);
+        } else {
+            defmt::warn!("Unmapped key '{}'", key);
+        }
+    }
+
+    Timer::after(Duration::from_millis(50)).await;
+    None
+}
 
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {
@@ -207,6 +281,11 @@ async fn main(_spawner: Spawner) {
         p.PIN_10, p.PIN_11, p.PIN_12, p.PIN_13,
     );
 
+    // Keypad multiple options
+    let mut last_key: Option<char> = None;
+    let mut tap_index: usize = 0;
+    let mut last_press_time = Instant::now();
+
     let sda = p.PIN_2;
     let scl = p.PIN_3;
     let mut i2c = I2c::new_async(p.I2C1, scl, sda, Irqs, I2cConfig::default());
@@ -215,6 +294,7 @@ async fn main(_spawner: Spawner) {
     let mut sender = I2cSender::new(&mut i2c, 0x27);
     let mut lcd = Lcd::new(&mut sender, &mut delay, Config::default(), None);
 
+    // Initialization message on LCD
     Timer::after(Duration::from_millis(300)).await;
     lcd.return_home();
     Timer::after(Duration::from_millis(5)).await;
@@ -225,23 +305,27 @@ async fn main(_spawner: Spawner) {
     lcd.write_str_to_cur("Keypad Ready!");
 
     loop {
-        if let Some(key) = scan_keypad(&mut row_pins, &mut col_pins, keys).await {
-            defmt::info!("Key: {}", key);
-
-            if let Some(code) = morse_table(key) {
+        if let Some(c) = handle_multitap_input(
+            &mut row_pins,
+            &mut col_pins,
+            keys,
+            &mut last_key,
+            &mut tap_index,
+            &mut last_press_time
+        ).await {
+            defmt::info!("Final confirmed input: '{}'", c);
+            if let Some(code) = morse_table(c) {
                 lcd.clean_display();
                 lcd.set_cursor_pos((0, 0));
                 lcd.write_str_to_cur("Char: ");
-                lcd.write_char_to_cur(key);
+                lcd.write_char_to_cur(c);
 
                 lcd.set_cursor_pos((0, 1));
                 lcd.write_str_to_cur("Morse: ");
                 lcd.write_str_to_cur(code);
             }
 
-            display_letter_morse(key, &mut led1, &mut led2, &mut led3, &mut buzzer).await;
+            display_letter_morse(c, &mut led1, &mut led2, &mut led3, &mut buzzer).await;
         }
-
-        Timer::after(Duration::from_millis(50)).await;
     }
 }
