@@ -7,6 +7,7 @@ use embassy_rp::{init, bind_interrupts, i2c::InterruptHandler};
 use embassy_rp::i2c::{I2c, Config as I2cConfig};
 use embassy_rp::peripherals::I2C1;
 use embassy_time::{Timer, Duration, Delay, Instant};
+use heapless::String;
 use {defmt_rtt as _, panic_probe as _};
 use lcd1602_driver::{
     lcd::{Basic, Ext, Lcd, Config},
@@ -398,8 +399,19 @@ async fn main(_spawner: Spawner) {
                 lcd.clean_display();
                 lcd.set_cursor_pos((0, 0));
                 lcd.write_str_to_cur("Fun Fact:");
-                lcd.set_cursor_pos((0, 1));
-                lcd.write_str_to_cur(&fact[..16.min(fact.len())]);
+
+                let mut buffer = String::<64>::new();
+                buffer.push_str(fact).ok();
+
+                let len = buffer.len();
+                let display_width = 16;
+
+                for i in 0..=(len.saturating_sub(display_width)) {
+                    lcd.set_cursor_pos((0, 1));
+                    let window = &buffer[i..i + display_width];
+                    lcd.write_str_to_cur(window);
+                    Timer::after(Duration::from_millis(600)).await;
+                }
 
                 continue;
             }
