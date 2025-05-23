@@ -260,14 +260,17 @@ async fn handle_multitap_input(
             *last_key = None;
             *tap_index = 0;
             return Some(('#', true));
-        }
-
-        if key == '*' {
+        } else if key == '*' {
             defmt::info!("Fun Fact key pressed: '*'");
             *last_key = None;
             *tap_index = 0;
             return Some(('*', false));
-        }
+        } else if key == 'A' {
+            defmt::info!("Hello key pressed: '*'");
+            *last_key = None;
+            *tap_index = 0;
+            return Some(('A', false));
+        } 
 
         if get_multitap_chars(key).is_none() {
             defmt::warn!("Unmapped key '{}'", key);
@@ -411,6 +414,25 @@ async fn main(_spawner: Spawner) {
                     let window = &buffer[i..i + display_width];
                     lcd.write_str_to_cur(window);
                     Timer::after(Duration::from_millis(600)).await;
+                }
+
+                continue;
+            } else if c == 'A' {
+                let message = "HELLO";
+
+                for ch in message.chars() {
+                    lcd.clean_display();
+                    lcd.set_cursor_pos((0, 0));
+                    lcd.write_str_to_cur("Char: ");
+                    lcd.write_char_to_cur(ch);
+
+                    if let Some(code) = morse_table(ch) {
+                        lcd.set_cursor_pos((0, 1));
+                        lcd.write_str_to_cur("Morse: ");
+                        lcd.write_str_to_cur(code);
+
+                        display_letter_morse(ch, &mut led1, &mut led2, &mut led3, &mut buzzer).await;
+                    }
                 }
 
                 continue;
