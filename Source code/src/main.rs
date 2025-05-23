@@ -261,6 +261,13 @@ async fn handle_multitap_input(
             return Some(('#', true));
         }
 
+        if key == '*' {
+            defmt::info!("Fun Fact key pressed: '*'");
+            *last_key = None;
+            *tap_index = 0;
+            return Some(('*', false));
+        }
+
         if get_multitap_chars(key).is_none() {
             defmt::warn!("Unmapped key '{}'", key);
             *last_key = None;
@@ -341,6 +348,22 @@ async fn main(_spawner: Spawner) {
     lcd.set_cursor_pos((0, 0));
     lcd.write_str_to_cur("Keypad Ready!");
 
+    const FUN_FACTS: &[&str] = &[
+        "E is the most used letter.",
+        "SOS is ...---...",
+        "Morse Code was invented in 1836.",
+        "The '@' in Morse is .--.-.",
+        "Used in WW2 communications.",
+        "SMS systems borrowed Morse ideas.",
+        "The Titanic sent SOS.",
+        "CQD was used before SOS.",
+        "Morse sent over radio & light.",
+        "NASA used Morse in beacons.",
+    ];
+
+    let mut fact_index = 0;
+
+
     loop {
         if let Some((c, is_mode_switch)) = handle_multitap_input(
             &mut row_pins,
@@ -367,6 +390,19 @@ async fn main(_spawner: Spawner) {
             }
 
             defmt::info!("Final confirmed input: '{}'", c);
+
+            if c == '*' {
+                let fact = FUN_FACTS[fact_index % FUN_FACTS.len()];
+                fact_index += 1;
+
+                lcd.clean_display();
+                lcd.set_cursor_pos((0, 0));
+                lcd.write_str_to_cur("Fun Fact:");
+                lcd.set_cursor_pos((0, 1));
+                lcd.write_str_to_cur(&fact[..16.min(fact.len())]);
+
+                continue;
+            }
 
             if let Some(code) = morse_table(c) {
                 lcd.clean_display();
