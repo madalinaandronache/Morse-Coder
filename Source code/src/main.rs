@@ -27,31 +27,6 @@ enum InputMode {
     Numeric,
 }
 
-
-// Blink all 3 LEDs at the same time
-async fn blink_all(
-    led1: &mut Output<'static>,
-    led2: &mut Output<'static>,
-    led3: &mut Output<'static>,
-) {
-    led1.set_high();
-    led2.set_high();
-    led3.set_high();
-    Timer::after(Duration::from_millis(500)).await;
-
-    led1.set_low();
-    led2.set_low();
-    led3.set_low();
-    Timer::after(Duration::from_millis(500)).await;
-}
-
-// Beep the buzzer
-async fn beep(buzzer: &mut Output<'static>) {
-    buzzer.set_high();
-    Timer::after(Duration::from_millis(200)).await;
-    buzzer.set_low();
-}
-
 // Check if a button is pressed
 async fn scan_keypad(
     rows: &mut [Input<'static>; 4],
@@ -218,6 +193,8 @@ fn confirm_key(key: char, tap_index: usize, mode: InputMode) -> Option<char> {
         InputMode::Numeric => {
             if key.is_ascii_digit() {
                 Some(key)
+            } else if key == '1' {
+                Some('1')
             } else {
                 None
             }
@@ -231,7 +208,6 @@ fn confirm_key(key: char, tap_index: usize, mode: InputMode) -> Option<char> {
         }
     }
 }
-
 
 async fn handle_multitap_input(
     rows: &mut [Input<'static>; 4],
@@ -288,14 +264,27 @@ async fn handle_multitap_input(
             *last_key = None;
             *tap_index = 0;
             return Some(('^', false));
-        } 
-
-        if get_multitap_chars(key).is_none() {
-            defmt::warn!("Unmapped key '{}'", key);
-            *last_key = None;
-            *tap_index = 0;
-            return None;
         }
+
+        match mode {
+            InputMode::Text => {
+                if get_multitap_chars(key).is_none() {
+                    defmt::warn!("Unmapped key '{}' in Text mode", key);
+                    *last_key = None;
+                    *tap_index = 0;
+                    return None;
+                }
+            }
+            InputMode::Numeric => {
+                if !key.is_ascii_digit() {
+                    defmt::warn!("Unmapped key '{}' in Numeric mode", key);
+                    *last_key = None;
+                    *tap_index = 0;
+                    return None;
+                }
+            }
+        }
+
 
         defmt::info!("Pressed key: {}", key);
 
@@ -317,9 +306,18 @@ async fn handle_multitap_input(
         *last_key = Some(key);
         *last_press_time = now;
 
-        let chars = get_multitap_chars(key).unwrap();
-        let ch = chars[*tap_index % chars.len()];
-        defmt::info!("Current character: '{}'", ch);
+        match mode {
+            InputMode::Text => {
+                if let Some(chars) = get_multitap_chars(key) {
+                    let ch = chars[*tap_index % chars.len()];
+                    defmt::info!("Current character: '{}'", ch);
+                }
+            }
+            InputMode::Numeric => {
+                defmt::info!("Current digit: '{}'", key);
+            }
+        }
+
     }
 
     Timer::after(Duration::from_millis(50)).await;
