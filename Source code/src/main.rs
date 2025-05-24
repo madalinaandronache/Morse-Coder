@@ -190,7 +190,6 @@ async fn flash_dash(
     buzzer.set_low();
 }
 
-
 async fn display_letter_morse(
     c: char,
     led1: &mut Output<'static>,
@@ -538,17 +537,37 @@ async fn main(_spawner: Spawner) {
                 }
 
                 '^' => {
-                    lcd.clean_display();
-                    lcd.set_cursor_pos((0, 0));
-                    lcd.write_str_to_cur("Sending S.O.S");
+                    let message = "SOS";
+                    let mut morse_string = String::<32>::new();
 
-                    for ch in "SOS".chars() {
-                        show_char_morse!(ch);
+                    for ch in message.chars() {
+                        if let Some(code) = morse_table(ch) {
+                            morse_string.push_str(code).ok();
+                        }
                     }
 
                     lcd.clean_display();
                     lcd.set_cursor_pos((0, 0));
-                    lcd.write_str_to_cur("S.O.S sent!");
+                    lcd.write_str_to_cur("Msg: SOS");
+                    lcd.set_cursor_pos((0, 1));
+                    lcd.write_str_to_cur(&morse_string);
+
+                    for symbol in morse_string.chars() {
+                        match symbol {
+                            '.' => flash_dot(&mut led2, &mut buzzer).await,
+                            '-' => flash_dash(&mut led1, &mut led2, &mut led3, &mut buzzer).await,
+                            _ => {}
+                        }
+
+                        Timer::after(Duration::from_millis(200)).await;
+                    }
+
+                    lcd.clean_display();
+                    lcd.set_cursor_pos((0, 0));
+                    lcd.write_str_to_cur("S.O.S message");
+
+                    lcd.set_cursor_pos((0, 1));
+                    lcd.write_str_to_cur("sent!");
                     Timer::after(Duration::from_secs(1)).await;
                 }
 
