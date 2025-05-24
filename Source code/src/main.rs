@@ -105,7 +105,7 @@ fn init_keypad(
         ['1', '2', '3', '!'],
         ['4', '5', '6', 'B'],
         ['7', '8', '9', 'C'],
-        ['*', '0', '#', 'D'],
+        ['*', '0', '#', '('],
     ];
 
     (rows, cols, keys)
@@ -270,6 +270,11 @@ async fn handle_multitap_input(
             *last_key = None;
             *tap_index = 0;
             return Some(('!', false));
+        } else if key == '(' {
+            defmt::info!("Demo key pressed: '!'");
+            *last_key = None;
+            *tap_index = 0;
+            return Some(('(', false));
         } 
 
         if get_multitap_chars(key).is_none() {
@@ -366,7 +371,7 @@ async fn main(_spawner: Spawner) {
     ];
 
     let mut fact_index = 0;
-
+    let mut message = String::<32>::new();
 
     loop {
         if let Some((c, is_mode_switch)) = handle_multitap_input(
@@ -394,6 +399,9 @@ async fn main(_spawner: Spawner) {
             }
 
             defmt::info!("Final confirmed input: '{}'", c);
+
+            // Demo mode
+            message.push(c).ok();
 
             if c == '*' {
                 let fact = FUN_FACTS[fact_index % FUN_FACTS.len()];
@@ -435,6 +443,41 @@ async fn main(_spawner: Spawner) {
                     }
                 }
 
+                continue;
+            } else if c == '(' {
+                if message.is_empty() {
+                    lcd.clean_display();
+                    lcd.set_cursor_pos((0, 0));
+                    lcd.write_str_to_cur("No msg to send");
+                    Timer::after(Duration::from_millis(1000)).await;
+                    continue;
+                }
+
+                for ch in message.chars().take(message.len().saturating_sub(1)) {
+                    lcd.clean_display();
+                    lcd.set_cursor_pos((0, 0));
+                    lcd.write_str_to_cur("Char: ");
+                    lcd.write_char_to_cur(ch);
+
+                    if let Some(code) = morse_table(ch) {
+                        lcd.set_cursor_pos((0, 1));
+                        lcd.write_str_to_cur("Morse: ");
+                        lcd.write_str_to_cur(code);
+
+                        display_letter_morse(ch, &mut led1, &mut led2, &mut led3, &mut buzzer).await;
+                    } else {
+                        lcd.set_cursor_pos((0, 1));
+                        lcd.write_str_to_cur("Unmapped!");
+                        Timer::after(Duration::from_millis(600)).await;
+                    }
+                }
+
+                lcd.clean_display();
+                lcd.set_cursor_pos((0, 0));
+                lcd.write_str_to_cur("Done sending!");
+                Timer::after(Duration::from_millis(1000)).await;
+
+                message.clear();
                 continue;
             }
 
