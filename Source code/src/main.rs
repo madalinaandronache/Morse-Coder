@@ -455,7 +455,7 @@ async fn main(_spawner: Spawner) {
                 lcd.set_cursor_pos((0, 0));
                 lcd.write_str_to_cur(match mode {
                     InputMode::Text => "Mode: Text",
-                    InputMode::Numeric => "Mode: 123",
+                    InputMode::Numeric => "Mode: Numeric",
                 });
                 continue;
             }
@@ -483,9 +483,35 @@ async fn main(_spawner: Spawner) {
                 }
 
                 '!' => {
-                    for ch in "HELLO".chars() {
-                        show_char_morse!(ch);
+                    let message = "HELLO";
+                    let mut morse_string = String::<64>::new();
+
+                    for ch in message.chars() {
+                        if let Some(code) = morse_table(ch) {
+                            morse_string.push_str(code).ok();
+                        }
                     }
+
+                    lcd.clean_display();
+                    lcd.set_cursor_pos((0, 0));
+                    lcd.write_str_to_cur("Msg: HELLO");
+                    lcd.set_cursor_pos((0, 1));
+                    lcd.write_str_to_cur(&morse_string);
+
+                    for symbol in morse_string.chars() {
+                        match symbol {
+                            '.' => flash_dot(&mut led2, &mut buzzer).await,
+                            '-' => flash_dash(&mut led1, &mut led2, &mut led3, &mut buzzer).await,
+                            _ => {}
+                        }
+
+                        Timer::after(Duration::from_millis(200)).await;
+                    }
+
+                    lcd.clean_display();
+                    lcd.set_cursor_pos((0, 0));
+                    lcd.write_str_to_cur("HELLO sent!");
+                    Timer::after(Duration::from_secs(1)).await;
                 }
 
                 '(' => {
@@ -495,9 +521,51 @@ async fn main(_spawner: Spawner) {
                         lcd.write_str_to_cur("No msg to send");
                         Timer::after(Duration::from_millis(1000)).await;
                     } else {
-                        for ch in message.chars().take(message.len().saturating_sub(1)) {
-                            if !matches!(ch, '*' | '!' | '(' | ')' | '^') {
-                                show_char_morse!(ch);
+                        let filtered_chars = message
+                            .chars()
+                            .take(message.len().saturating_sub(1))
+                            .filter(|ch| !matches!(ch, '*' | '!' | '(' | ')' | '^'));
+
+                        lcd.clean_display();
+
+                        // Print the message on the first line
+                        lcd.set_cursor_pos((0, 0));
+                        let mut count = 0;
+                        for ch in filtered_chars {
+                            if count < 16 {
+                                lcd.write_char_to_cur(ch);
+                                count += 1;
+                            } else {
+                                break;
+                            }
+                        }
+
+                        // Print each letter's Morse codification
+                        for ch in message
+                            .chars()
+                            .take(message.len().saturating_sub(1))
+                            .filter(|ch| !matches!(ch, '*' | '!' | '(' | ')' | '^'))
+                        {
+                            if let Some(code) = morse_table(ch) {
+                                lcd.set_cursor_pos((0, 1));
+                                lcd.write_str_to_cur("Morse:          ");
+                                lcd.set_cursor_pos((7, 1));
+                                lcd.write_str_to_cur(code);
+
+                                for symbol in code.chars() {
+                                    match symbol {
+                                        '.' => flash_dot(&mut led2, &mut buzzer).await,
+                                        '-' => flash_dash(&mut led1, &mut led2, &mut led3, &mut buzzer).await,
+                                        _ => {}
+                                    }
+                                    Timer::after(Duration::from_millis(200)).await;
+                                }
+
+                                Timer::after(Duration::from_millis(600)).await;
+                            } else {
+                                lcd.set_cursor_pos((0, 1));
+                                lcd.write_str_to_cur("Unmapped!");
+                                Timer::after(Duration::from_millis(600)).await;
                             }
                         }
 
@@ -517,19 +585,21 @@ async fn main(_spawner: Spawner) {
 
                     lcd.clean_display();
                     lcd.set_cursor_pos((0, 0));
-                    lcd.write_str_to_cur("Guess the letter!");
+                    lcd.write_str_to_cur("Guess the letter");
                     lcd.set_cursor_pos((0, 1));
-                    lcd.write_str_to_cur("Playing in Morse");
+                    lcd.write_str_to_cur("codified!");
+
+                    Timer::after(Duration::from_secs(2)).await;
 
                     if morse_table(letter).is_some() {
                         display_letter_morse(letter, &mut led1, &mut led2, &mut led3, &mut buzzer).await;
                     }
 
-                    Timer::after(Duration::from_secs(7)).await;
+                    Timer::after(Duration::from_secs(4)).await;
 
                     lcd.clean_display();
                     lcd.set_cursor_pos((0, 0));
-                    lcd.write_str_to_cur("It was:");
+                    lcd.write_str_to_cur("The letter was:");
                     lcd.set_cursor_pos((0, 1));
                     lcd.write_char_to_cur(letter);
 
