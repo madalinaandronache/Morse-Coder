@@ -102,7 +102,7 @@ fn init_keypad(
     ];
 
     let keys = [
-        ['1', '2', '3', 'A'],
+        ['1', '2', '3', '!'],
         ['4', '5', '6', 'B'],
         ['7', '8', '9', 'C'],
         ['*', '0', '#', 'D'],
@@ -265,11 +265,11 @@ async fn handle_multitap_input(
             *last_key = None;
             *tap_index = 0;
             return Some(('*', false));
-        } else if key == 'A' {
-            defmt::info!("Hello key pressed: '*'");
+        } else if key == '!' {
+            defmt::info!("Hello key pressed: '!'");
             *last_key = None;
             *tap_index = 0;
-            return Some(('A', false));
+            return Some(('!', false));
         } 
 
         if get_multitap_chars(key).is_none() {
@@ -417,7 +417,7 @@ async fn main(_spawner: Spawner) {
                 }
 
                 continue;
-            } else if c == 'A' {
+            } else if c == '!' {
                 let message = "HELLO";
 
                 for ch in message.chars() {
