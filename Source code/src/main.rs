@@ -13,6 +13,9 @@ use lcd1602_driver::{
     lcd::{Basic, Ext, Lcd, Config},
     sender::I2cSender,
 };
+use rand::Rng;
+use rand::rngs::SmallRng;
+use rand::SeedableRng;
 
 bind_interrupts!(struct Irqs {
     I2C1_IRQ => InterruptHandler<I2C1>;
@@ -104,7 +107,7 @@ fn init_keypad(
     let keys = [
         ['1', '2', '3', '!'],
         ['4', '5', '6', 'B'],
-        ['7', '8', '9', 'C'],
+        ['7', '8', '9', ')'],
         ['*', '0', '#', '('],
     ];
 
@@ -271,10 +274,15 @@ async fn handle_multitap_input(
             *tap_index = 0;
             return Some(('!', false));
         } else if key == '(' {
-            defmt::info!("Demo key pressed: '!'");
+            defmt::info!("Test key pressed: '!'");
             *last_key = None;
             *tap_index = 0;
             return Some(('(', false));
+        } else if key == ')' {
+            defmt::info!("Demo quiz key pressed: '!'");
+            *last_key = None;
+            *tap_index = 0;
+            return Some((')', false));
         } 
 
         if get_multitap_chars(key).is_none() {
@@ -368,6 +376,12 @@ async fn main(_spawner: Spawner) {
         "CQD was used before SOS.",
         "Morse sent over radio & light.",
         "NASA used Morse in beacons.",
+    ];
+
+    const LETTERS: &[char] = &[
+        'A','B','C','D','E','F','G','H','I','J',
+        'K','L','M','N','O','P','Q','R','S','T',
+        'U','V','W','X','Y','Z'
     ];
 
     let mut fact_index = 0;
@@ -478,6 +492,38 @@ async fn main(_spawner: Spawner) {
                 Timer::after(Duration::from_millis(1000)).await;
 
                 message.clear();
+                continue;
+            } else if c == ')' {
+                // Morse Quiz Demo
+                let ticks = embassy_time::Instant::now().as_ticks();
+                let mut rng = SmallRng::seed_from_u64(ticks as u64);
+                let letter = LETTERS[rng.gen_range(0..LETTERS.len())];
+
+                lcd.clean_display();
+                lcd.set_cursor_pos((0, 0));
+                lcd.write_str_to_cur("Guess the letter!");
+                lcd.set_cursor_pos((0, 1));
+                lcd.write_str_to_cur("Playing in Morse");
+
+                if morse_table(letter).is_some() {
+                    display_letter_morse(
+                        letter,
+                        &mut led1,
+                        &mut led2,
+                        &mut led3,
+                        &mut buzzer,
+                    ).await;
+                }
+
+                Timer::after(Duration::from_secs(7)).await;
+
+                lcd.clean_display();
+                lcd.set_cursor_pos((0, 0));
+                lcd.write_str_to_cur("It was:");
+                lcd.set_cursor_pos((0, 1));
+                lcd.write_char_to_cur(letter);
+
+                Timer::after(Duration::from_secs(2)).await;
                 continue;
             }
 

@@ -104,7 +104,7 @@ static_cell = "2.1"
 embedded-storage = { version = "0.3" }
 
 # Random number generators
-rand = { version = "0.8.5", default-features = false }
+rand = { version = "0.8.5", default-features = false, features = ["small_rng"] }
 
 # Support for read/write files on a FAT formatted SD
 embedded-sdmmc = "0.7.0"
