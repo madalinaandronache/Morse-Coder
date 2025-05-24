@@ -497,7 +497,9 @@ async fn main(_spawner: Spawner) {
                         Timer::after(Duration::from_millis(1000)).await;
                     } else {
                         for ch in message.chars().take(message.len().saturating_sub(1)) {
-                            show_char_morse!(ch);
+                            if !matches!(ch, '*' | '!' | '(' | ')' | '^') {
+                                show_char_morse!(ch);
+                            }
                         }
 
                         lcd.clean_display();
