@@ -411,7 +411,9 @@ async fn main(_spawner: Spawner) {
     lcd.clean_display();
     Timer::after(Duration::from_millis(5)).await;
     lcd.set_cursor_pos((0, 0));
-    lcd.write_str_to_cur("Keypad Ready!");
+    lcd.write_str_to_cur("Welcome to ");
+    lcd.set_cursor_pos((0, 1));
+    lcd.write_str_to_cur("Morse Coder!");
 
     let (mut fact_index, mut message, mut last_key, mut tap_index, mut last_press_time, mut mode) = init_state();
 
