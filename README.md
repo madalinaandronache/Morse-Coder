@@ -70,7 +70,7 @@ Additional features:
 
 The following diagram shows the system architecture:
 
-![System Architecture Diagram](./images/diagram.png)
+![System Architecture Diagram](./Images/diagram.png)
 
 The **Raspberry Pi Pico 2W** acts as the brain of the system, coordinating all interactions between input and output components.
 
@@ -81,7 +81,7 @@ The **Raspberry Pi Pico 2W** acts as the brain of the system, coordinating all i
 
 ### Keypad Interface Design
 
-![Keypad Diagram](./images/keypad.jpg)
+![Keypad Diagram](./Images/keypad.jpg)
 
 | Key | Function |
 |-----|----------|
