@@ -7,7 +7,8 @@ The user enters text through a 4x4 matrix keypad, which is then translated into 
 * Light signals (LEDs)
 * Visual display (LCD screen using dots and dashes)
 
-The goal is to provide a compact and intuitive system for encoding and visualizing Morse messages using embedded Rust.
+The goal is to provide a compact and intuitive system for encoding and visualizing Morse messages using embedded Rust.  
+The project required around **60 hours** of hands-on development, from initial hardware setup to final software testing and documentation.
 
 ## Functionality Description
 
@@ -19,11 +20,16 @@ character into Morse code. The Morse code output is:
 
 Additional functionality includes:
 
-* Predefined commands to send "HELLO" and "SOS"
-* Displaying fun facts
-* A Morse code quiz mode
+Additional features:
+- Predefined commands to send **HELLO** and **SOS**
+- Displaying **fun facts** on screen
+- A **Morse code quiz mode**
 
-## Hardware Requirements
+---
+
+## Requirments
+
+### Hardware
 
 | Component | Purpose | Function |
 |:----------|:--------|:---------|
@@ -33,6 +39,15 @@ Additional functionality includes:
 | **LEDs** x 3 | Visual representation of Morse code signals | - When a dot (.) is detected, only **one LED** lights up (the middle one).<br/>- When a dash (_) is detected, **all three LEDs** light up simultaneously. |
 | **LCD Display** | Displays the Morse code translation | Shows real-time dot and dash output |
 | **Breadboard + Jumper Wires** | Temporary prototyping connections | Connects components to the Raspberry Pi Pico during development |
+
+### Software
+
+- **Rust** with `thumbv6m-none-eabi` target
+- **Embassy** async embedded framework
+- `probe-rs` or `cargo-embed` for flashing code
+- See dependencies in the table below
+
+---
 
 ## Software Dependencies
 
@@ -49,12 +64,13 @@ Additional functionality includes:
 | [heapless](https://crates.io/crates/heapless) | Fixed-size data structures for no_std | Used for buffer storage (messages, Morse code) |
 | [rand](https://crates.io/crates/rand) + `small_rng` | Random number generation | Used for quiz feature (random letter) |
 
+## Hardware & Software Design
 
-## Arhitecture Design
+### System Arhitecture
 
 The following diagram shows the system architecture:
 
-![System Architecture Diagram](./images/diagram.svg)
+![System Architecture Diagram](./images/diagram.png)
 
 The **Raspberry Pi Pico 2W** acts as the brain of the system, coordinating all interactions between input and output components.
 
@@ -63,4 +79,22 @@ The **Raspberry Pi Pico 2W** acts as the brain of the system, coordinating all i
 - The **LEDs** and **buzzer** output the corresponding Morse signals.
 - The **LCD screen** displays the Morse code in real time using dots (.) and dashes (_).
 
-<!-- Add the keypad design  -->
+### Keypad Interface Design
+
+![Keypad Diagram](./images/keypad.jpg)
+
+| Key | Function |
+|-----|----------|
+| `HELLO` | Sends `HELLO` in Morse |
+| `S.O.S.` | Sends SOS sequence |
+| `DEMO` | Quiz mode (guess the letter) |
+| `FUN FACTS` | Shows trivia |
+| `MODE` | Switches text/number input |
+| `TEST ALL` | Sends full message buffer |
+
+---
+
+## Acknowledgements
+
+- Based on coursework from the Microprocessor Architecture course @ Politehnica University of Bucharest
+- Built using [Embassy](https://embassy.dev/) async embedded framework
