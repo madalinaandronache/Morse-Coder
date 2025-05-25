@@ -94,6 +94,13 @@ The **Raspberry Pi Pico 2W** acts as the brain of the system, coordinating all i
 
 ---
 
+### Software Flow
+
+![Software Flow Diagram](./Images/software_flow.webp)
+
+The software operates in a continuous loop, monitoring keypad input. When a key is pressed, the program first checks whether it is a special key (such as HELLO, S.O.S., FUN FACTS, DEMO, or TEST ALL). If so, it executes the corresponding function: displaying or transmitting predefined Morse code sequences, showing a fun fact, playing a Morse quiz, or sending the entire message typed so far. If the key is not a special command, the program proceeds to check the current input mode—Text or Numeric. In Text mode, multitap logic is used to determine the intended character, while in Numeric mode digits are added directly. After a one-second pause without further taps, the current character is confirmed, added to a message buffer, and its Morse code is displayed and played. The system then returns to listening for the next key input.
+
+
 ## Acknowledgements
 
 - Based on coursework from the Microprocessor Architecture course @ Politehnica University of Bucharest
